@@ -1,0 +1,146 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\develop\\ff14\\ServiceCheck\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{D4C83B22-12B2-4F38-88B9-488A2BB96DC4}|ServiceCheck\\ServiceCheck.csproj|d:\\develop\\ff14\\servicecheck\\servicecheck\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D4C83B22-12B2-4F38-88B9-488A2BB96DC4}|ServiceCheck\\ServiceCheck.csproj|solutionrelative:servicecheck\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D4C83B22-12B2-4F38-88B9-488A2BB96DC4}|ServiceCheck\\ServiceCheck.csproj|d:\\develop\\ff14\\servicecheck\\servicecheck\\form1.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D4C83B22-12B2-4F38-88B9-488A2BB96DC4}|ServiceCheck\\ServiceCheck.csproj|solutionrelative:servicecheck\\form1.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D4C83B22-12B2-4F38-88B9-488A2BB96DC4}|ServiceCheck\\ServiceCheck.csproj|d:\\develop\\ff14\\servicecheck\\servicecheck\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D4C83B22-12B2-4F38-88B9-488A2BB96DC4}|ServiceCheck\\ServiceCheck.csproj|solutionrelative:servicecheck\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D4C83B22-12B2-4F38-88B9-488A2BB96DC4}|ServiceCheck\\ServiceCheck.csproj|d:\\develop\\ff14\\servicecheck\\servicecheck\\form1.resx||{81828910-B8B3-4D2B-99A3-067027C180C1}",
+      "RelativeMoniker": "D:0:0:{D4C83B22-12B2-4F38-88B9-488A2BB96DC4}|ServiceCheck\\ServiceCheck.csproj|solutionrelative:servicecheck\\form1.resx||{81828910-B8B3-4D2B-99A3-067027C180C1}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D4C83B22-12B2-4F38-88B9-488A2BB96DC4}|ServiceCheck\\ServiceCheck.csproj|D:\\develop\\ff14\\ServiceCheck\\servicecheck\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{D4C83B22-12B2-4F38-88B9-488A2BB96DC4}|ServiceCheck\\ServiceCheck.csproj|solutionrelative:servicecheck\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D4C83B22-12B2-4F38-88B9-488A2BB96DC4}|ServiceCheck\\ServiceCheck.csproj|d:\\develop\\ff14\\servicecheck\\servicecheck\\models\\serverstatus.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D4C83B22-12B2-4F38-88B9-488A2BB96DC4}|ServiceCheck\\ServiceCheck.csproj|solutionrelative:servicecheck\\models\\serverstatus.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 2,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\develop\\ff14\\ServiceCheck\\ServiceCheck\\Program.cs",
+              "RelativeDocumentMoniker": "ServiceCheck\\Program.cs",
+              "ToolTip": "D:\\develop\\ff14\\ServiceCheck\\ServiceCheck\\Program.cs",
+              "RelativeToolTip": "ServiceCheck\\Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-24T07:30:50.683Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Form1.resx",
+              "DocumentMoniker": "D:\\develop\\ff14\\ServiceCheck\\ServiceCheck\\Form1.resx",
+              "RelativeDocumentMoniker": "ServiceCheck\\Form1.resx",
+              "ToolTip": "D:\\develop\\ff14\\ServiceCheck\\ServiceCheck\\Form1.resx",
+              "RelativeToolTip": "ServiceCheck\\Form1.resx",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001005|",
+              "WhenOpened": "2025-06-24T07:30:49.931Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Form1.cs",
+              "DocumentMoniker": "D:\\develop\\ff14\\ServiceCheck\\ServiceCheck\\Form1.cs",
+              "RelativeDocumentMoniker": "ServiceCheck\\Form1.cs",
+              "ToolTip": "D:\\develop\\ff14\\ServiceCheck\\ServiceCheck\\Form1.cs",
+              "RelativeToolTip": "ServiceCheck\\Form1.cs",
+              "ViewState": "AgIAABgAAAAAAAAAAAAjwB4AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-24T07:24:39.321Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "ServerStatus.cs",
+              "DocumentMoniker": "D:\\develop\\ff14\\ServiceCheck\\ServiceCheck\\Models\\ServerStatus.cs",
+              "RelativeDocumentMoniker": "ServiceCheck\\Models\\ServerStatus.cs",
+              "ToolTip": "D:\\develop\\ff14\\ServiceCheck\\ServiceCheck\\Models\\ServerStatus.cs",
+              "RelativeToolTip": "ServiceCheck\\Models\\ServerStatus.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAVAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-24T07:25:47.402Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Form1.Designer.cs",
+              "DocumentMoniker": "D:\\develop\\ff14\\ServiceCheck\\ServiceCheck\\Form1.Designer.cs",
+              "RelativeDocumentMoniker": "ServiceCheck\\Form1.Designer.cs",
+              "ToolTip": "D:\\develop\\ff14\\ServiceCheck\\ServiceCheck\\Form1.Designer.cs",
+              "RelativeToolTip": "ServiceCheck\\Form1.Designer.cs",
+              "ViewState": "AgIAAJYAAAAAAAAAAAAswOoAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-24T07:18:49.64Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{cce594b6-0c39-4442-ba28-10c64ac7e89f}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "Form1.cs [\u8BBE\u8BA1]",
+              "DocumentMoniker": "D:\\develop\\ff14\\ServiceCheck\\ServiceCheck\\Form1.cs",
+              "RelativeDocumentMoniker": "ServiceCheck\\Form1.cs",
+              "ToolTip": "D:\\develop\\ff14\\ServiceCheck\\ServiceCheck\\Form1.cs [\u8BBE\u8BA1]",
+              "RelativeToolTip": "ServiceCheck\\Form1.cs [\u8BBE\u8BA1]",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-24T07:25:08.362Z",
+              "EditorCaption": " [\u8BBE\u8BA1]"
+            }
+          ]
+        },
+        {
+          "DockedWidth": 1502,
+          "SelectedChildIndex": -1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:1:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

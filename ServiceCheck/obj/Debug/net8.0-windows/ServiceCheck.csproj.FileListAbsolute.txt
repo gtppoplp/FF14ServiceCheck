@@ -1,0 +1,16 @@
+D:\develop\ff14\ServiceCheck\ServiceCheck\obj\Debug\net8.0-windows\ServiceCheck.Form1.resources
+D:\develop\ff14\ServiceCheck\ServiceCheck\obj\Debug\net8.0-windows\ServiceCheck.csproj.GenerateResource.cache
+D:\develop\ff14\ServiceCheck\ServiceCheck\obj\Debug\net8.0-windows\ServiceCheck.GeneratedMSBuildEditorConfig.editorconfig
+D:\develop\ff14\ServiceCheck\ServiceCheck\obj\Debug\net8.0-windows\ServiceCheck.AssemblyInfoInputs.cache
+D:\develop\ff14\ServiceCheck\ServiceCheck\obj\Debug\net8.0-windows\ServiceCheck.AssemblyInfo.cs
+D:\develop\ff14\ServiceCheck\ServiceCheck\obj\Debug\net8.0-windows\ServiceCheck.csproj.CoreCompileInputs.cache
+D:\develop\ff14\ServiceCheck\ServiceCheck\bin\Debug\net8.0-windows\ServiceCheck.exe
+D:\develop\ff14\ServiceCheck\ServiceCheck\bin\Debug\net8.0-windows\ServiceCheck.deps.json
+D:\develop\ff14\ServiceCheck\ServiceCheck\bin\Debug\net8.0-windows\ServiceCheck.runtimeconfig.json
+D:\develop\ff14\ServiceCheck\ServiceCheck\bin\Debug\net8.0-windows\ServiceCheck.dll
+D:\develop\ff14\ServiceCheck\ServiceCheck\bin\Debug\net8.0-windows\ServiceCheck.pdb
+D:\develop\ff14\ServiceCheck\ServiceCheck\obj\Debug\net8.0-windows\ServiceCheck.dll
+D:\develop\ff14\ServiceCheck\ServiceCheck\obj\Debug\net8.0-windows\refint\ServiceCheck.dll
+D:\develop\ff14\ServiceCheck\ServiceCheck\obj\Debug\net8.0-windows\ServiceCheck.pdb
+D:\develop\ff14\ServiceCheck\ServiceCheck\obj\Debug\net8.0-windows\ServiceCheck.genruntimeconfig.cache
+D:\develop\ff14\ServiceCheck\ServiceCheck\obj\Debug\net8.0-windows\ref\ServiceCheck.dll
