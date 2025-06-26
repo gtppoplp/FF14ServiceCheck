@@ -16,3 +16,5 @@ local.properties
 /app/src/main/assets/apps/__UNI__8EE75CC/
 .idea
 build
+ServiceCheck/bin
+ServiceCheck/bin/*
