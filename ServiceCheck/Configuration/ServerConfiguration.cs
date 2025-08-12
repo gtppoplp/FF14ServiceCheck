@@ -29,5 +29,5 @@ public class AppSettings {
     /// <summary>
     /// 是否启用连接超时提示
     /// </summary>
-    public static int ConnectionTimeoutMs => 5000;
+    public static int ConnectionTimeoutMs => 1000;
 }

@@ -332,6 +332,7 @@ public partial class Form1 : Form {
 
             foreach (var server in selectedServers) {
                 var wasOnline = server.IsRunning;
+                logListBox.Items.Insert(0, $"[{DateTime.Now}] 正在检查 {server.Name} 服务器状态...");
                 var isOnline = await CheckServerConnectivityAsync(server);
                 server.IsRunning = isOnline;
 
@@ -371,7 +372,7 @@ public partial class Form1 : Form {
                     logListBox.Items.Insert(0, $"[{DateTime.Now}] 播放提示音失败: {ex.Message}");
                 }
             }
-
+            logListBox.Items.Insert(0, $"[{DateTime.Now}] 服务器状态检查完成，共检查 {selectedServers.Count} 个服务器,检查时间: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             // 更新最后检查时间
             lastCheckLabel.Text = $@"最后检查: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
         } catch (Exception ex) {
