@@ -330,25 +330,35 @@ public partial class Form1 : Form {
                 .Where(s => s.IsSelected)
                 .ToList();
 
-            foreach (var server in selectedServers) {
-                var wasOnline = server.IsRunning;
-                logListBox.Items.Insert(0, $"[{DateTime.Now}] 正在检查 {server.Name} 服务器状态...");
+            logListBox.Items.Insert(0, $"[{DateTime.Now}] 开始并发检查 {selectedServers.Count} 个服务器状态...");
+
+            // 记录每个服务器检查前的状态
+            var serverStates = selectedServers.ToDictionary(s => s, s => s.IsRunning);
+
+            // 并发检查所有选中的服务器
+            var checkTasks = selectedServers.Select(async server => {
                 var isOnline = await CheckServerConnectivityAsync(server);
                 server.IsRunning = isOnline;
+                return new { Server = server, IsOnline = isOnline, WasOnline = serverStates[server] };
+            });
 
+            var results = await Task.WhenAll(checkTasks);
+
+            // 更新UI和处理状态变化
+            foreach (var result in results) {
                 // 更新UI中对应的节点
                 foreach (TreeNode areaNode in serverTreeView.Nodes) {
                     foreach (TreeNode serverNode in areaNode.Nodes) {
-                        if (serverNode.Tag != server) continue;
-                        UpdateServerNodeText(serverNode, server);
+                        if (serverNode.Tag != result.Server) continue;
+                        UpdateServerNodeText(serverNode, result.Server);
                         break;
                     }
                 }
 
                 // 如果服务器从离线变为在线，则记录并加入通知列表
-                if (wasOnline || !isOnline) continue;
-                var areaName = serverAreas.First(a => a.Servers.Contains(server)).Name;
-                var message = $"{areaName} - {server.Name} 服务器上线! (延时: {server.LastPingTime:F1}ms)";
+                if (result.WasOnline || !result.IsOnline) continue;
+                var areaName = serverAreas.First(a => a.Servers.Contains(result.Server)).Name;
+                var message = $"{areaName} - {result.Server.Name} 服务器上线! (延时: {result.Server.LastPingTime:F1}ms)";
                 logListBox.Items.Insert(0, $"[{DateTime.Now}] {message}");
                 newlyOnlineServers.Add(message);
             }
@@ -372,7 +382,10 @@ public partial class Form1 : Form {
                     logListBox.Items.Insert(0, $"[{DateTime.Now}] 播放提示音失败: {ex.Message}");
                 }
             }
-            logListBox.Items.Insert(0, $"[{DateTime.Now}] 服务器状态检查完成，共检查 {selectedServers.Count} 个服务器,检查时间: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+
+            var onlineCount = results.Count(r => r.IsOnline);
+            logListBox.Items.Insert(0, $"[{DateTime.Now}] 并发检查完成: {onlineCount}/{selectedServers.Count} 服务器在线");
+            
             // 更新最后检查时间
             lastCheckLabel.Text = $@"最后检查: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
         } catch (Exception ex) {
