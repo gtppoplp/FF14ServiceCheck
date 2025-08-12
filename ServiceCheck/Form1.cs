@@ -330,7 +330,7 @@ public partial class Form1 : Form {
                 .Where(s => s.IsSelected)
                 .ToList();
 
-            logListBox.Items.Insert(0, $"[{DateTime.Now}] 开始并发检查 {selectedServers.Count} 个服务器状态...");
+            logListBox.Items.Insert(0, $"[{DateTime.Now}] 开始同时检查 {selectedServers.Count} 个服务器状态...");
 
             // 记录每个服务器检查前的状态
             var serverStates = selectedServers.ToDictionary(s => s, s => s.IsRunning);
@@ -384,7 +384,7 @@ public partial class Form1 : Form {
             }
 
             var onlineCount = results.Count(r => r.IsOnline);
-            logListBox.Items.Insert(0, $"[{DateTime.Now}] 并发检查完成: {onlineCount}/{selectedServers.Count} 服务器在线");
+            logListBox.Items.Insert(0, $"[{DateTime.Now}] 同时检查完成: {onlineCount}/{selectedServers.Count} 服务器在线");
             
             // 更新最后检查时间
             lastCheckLabel.Text = $@"最后检查: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
