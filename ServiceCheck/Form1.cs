@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Media;
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Text.Json;
 using ServiceCheck.Configuration;
@@ -49,10 +50,26 @@ public partial class Form1 : Form {
     private ServerConfiguration? configuration;
 
     /// <summary>
+    /// HTTP客户端，用于调用FF14官方API
+    /// </summary>
+    private readonly HttpClient httpClient;
+
+    /// <summary>
+    /// 最后一次API检查的结果缓存
+    /// </summary>
+    private FF14ApiResponse? lastApiResponse;
+
+    /// <summary>
     /// 构造函数，初始化窗体和相关组件
     /// </summary>
     public Form1() {
         InitializeComponent();
+        
+    // 初始化HTTP客户端
+        httpClient = new HttpClient();
+        httpClient.Timeout = TimeSpan.FromSeconds(10);
+        httpClient.DefaultRequestHeaders.Add("User-Agent", "FF14ServerMonitor/1.0");
+        
         InitializeCustomComponents();
         _ = LoadServersAsync();
     }
@@ -83,6 +100,10 @@ public partial class Form1 : Form {
         // 为测试提示音按钮添加事件处理
         testSoundButton.Click -= TestSoundButton_Click!;
         testSoundButton.Click += TestSoundButton_Click!;
+
+        // 为测试抓包按钮添加事件处理
+        testPacketButton.Click -= TestPacketButton_Click!;
+        testPacketButton.Click += TestPacketButton_Click!;
 
         // 初始化托盘图标和菜单
         InitializeTrayIcon();
@@ -244,80 +265,295 @@ public partial class Form1 : Form {
     }
 
     /// <summary>
-    /// 更新服务器节点的文本和颜色
+    /// 更新服务器节点的文本和颜色（支持详细状态显示）
     /// </summary>
     /// <param name="node"></param>
     /// <param name="server"></param>
-    private static void UpdateServerNodeText(TreeNode node, Server server) {
-        var status = server.IsRunning ? "在线" : "离线";
+    /// <param name="status"></param>
+    /// <param name="detailedStatus"></param>
+    private static void UpdateServerNodeText(TreeNode node, Server server, string? status = null, string? detailedStatus = null) {
+        var displayStatus = status ?? (server.IsRunning ? "在线" : "离线");
         var pingText = server.LastPingTime > 0 ? $" ({server.LastPingTime:F1}ms)" : "";
-        node.Text = $@"{server.Name} [{status}]{pingText}";
+        
+    node.Text = $@"{server.Name} [{displayStatus}]{pingText}";
+        
+        // 设置颜色和工具提示
+        switch (displayStatus) {
+            case "在线":
+                node.ForeColor = Color.Green;
+         break;
+      case "完全离线":
+         node.ForeColor = Color.Red;
+       break;
+  case "TCP通/API离线":
+   node.ForeColor = Color.Orange;
+                break;
+            case "TCP断/API在线":
+    node.ForeColor = Color.Purple;
+      break;
+      default:
         node.ForeColor = server.IsRunning ? Color.Green : Color.Red;
+         break;
+        }
+        
+        // 设置工具提示显示详细状态
+        if (!string.IsNullOrEmpty(detailedStatus)) {
+       node.ToolTipText = detailedStatus;
+        }
     }
 
     /// <summary>
-    /// 检查服务器的连接状态
+    /// 检查服务器的连接状态并进行抓包模拟
     /// </summary>
     /// <param name="server"></param>
     /// <returns></returns>
     private async Task<bool> CheckServerConnectivityAsync(Server server) {
+        var stopwatch = Stopwatch.StartNew();
+        TcpClient? client = null;
+        NetworkStream? stream = null;
+        
         try {
-            var stopwatch = Stopwatch.StartNew();
-            using var client = new TcpClient();
-
+            logListBox.Items.Insert(0, $"[{DateTime.Now}] === 开始检查服务器 {server.Name} ({server.IpAddress}:{server.Port}) ===");
+            
+            client = new TcpClient();
+            
+            // 设置TCP选项
+            client.ReceiveTimeout = AppSettings.ConnectionTimeoutMs;
+            client.SendTimeout = AppSettings.ConnectionTimeoutMs;
+            
+            logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 正在建立TCP连接...");
+            
             // 设置连接超时
             var connectTask = client.ConnectAsync(IPAddress.Parse(server.IpAddress), server.Port);
             var timeoutTask = Task.Delay(AppSettings.ConnectionTimeoutMs);
 
             var completedTask = await Task.WhenAny(connectTask, timeoutTask);
-            stopwatch.Stop();
-
-            if (completedTask == connectTask && client.Connected) {
-                server.LastPingTime = stopwatch.Elapsed.TotalMilliseconds;
-                client.Close();
-                return true;
+            
+            if (completedTask == timeoutTask) {
+                logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 连接超时 ({AppSettings.ConnectionTimeoutMs}ms)");
+                server.LastPingTime = 0;
+                return false;
+            }
+            
+            if (!client.Connected) {
+                logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 连接失败 - 无法建立TCP连接");
+                server.LastPingTime = 0;
+                return false;
             }
 
+            var connectTime = stopwatch.Elapsed.TotalMilliseconds;
+            logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] TCP连接成功 (耗时: {connectTime:F1}ms)");
+            
+            // 获取网络流进行数据交换
+            stream = client.GetStream();
+            
+            // 模拟游戏客户端登录握手包 (这里使用FF14的初始连接包格式)
+            var handshakePacket = CreateFF14HandshakePacket();
+            
+            logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 发送握手数据包 ({handshakePacket.Length} 字节)");
+            logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 发送数据: {BitConverter.ToString(handshakePacket)}");
+            
+            // 发送握手包
+            await stream.WriteAsync(handshakePacket, 0, handshakePacket.Length);
+            
+            // 等待服务器响应
+            var responseBuffer = new byte[1024];
+            var responseTask = stream.ReadAsync(responseBuffer, 0, responseBuffer.Length);
+            var responseTimeoutTask = Task.Delay(5000); // 5秒响应超时
+            
+            var responseCompletedTask = await Task.WhenAny(responseTask, responseTimeoutTask);
+            
+            if (responseCompletedTask == responseTimeoutTask) {
+                logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 服务器响应超时 (5000ms)");
+            } else {
+                var bytesRead = await responseTask;
+                stopwatch.Stop();
+                
+                if (bytesRead > 0) {
+                    var responseData = new byte[bytesRead];
+                    Array.Copy(responseBuffer, responseData, bytesRead);
+                    
+                    logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 收到服务器响应 ({bytesRead} 字节)");
+                    logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 响应数据: {BitConverter.ToString(responseData)}");
+                    
+                    // 解析响应数据
+                    AnalyzeServerResponse(server, responseData);
+                    
+                    server.LastPingTime = stopwatch.Elapsed.TotalMilliseconds;
+                    logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 服务器在线! 总响应时间: {server.LastPingTime:F1}ms");
+                    return true;
+                } else {
+                    logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 服务器关闭了连接 (收到0字节)");
+                }
+            }
+            
+            server.LastPingTime = stopwatch.Elapsed.TotalMilliseconds;
+            return true; // 即使没有数据响应，只要能连接就认为服务器在线
+            
+        } catch (SocketException ex) {
+            stopwatch.Stop();
+            logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] Socket异常: {ex.Message} (错误代码: {ex.ErrorCode})");
             server.LastPingTime = 0;
             return false;
         } catch (Exception ex) {
-            logListBox.Items.Insert(0, $"[{DateTime.Now}] 连接 {server.Name} 失败: {ex.Message}");
+            stopwatch.Stop();
+            logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 连接异常: {ex.Message}");
             server.LastPingTime = 0;
             return false;
+        } finally {
+            try {
+                stream?.Close();
+                client?.Close();
+                logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 连接已关闭");
+            } catch (Exception ex) {
+                logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 关闭连接时出错: {ex.Message}");
+            }
         }
     }
 
     /// <summary>
-    /// 检查所有服务器的状态
+    /// 创建FF14游戏的握手数据包
+    /// </summary>
+    /// <returns></returns>
+    private static byte[] CreateFF14HandshakePacket() {
+        // 这是一个模拟的FF14客户端握手包
+        // 实际的FF14数据包格式可能不同，这里只是为了演示
+        var packet = new List<byte>();
+        
+        // 添加包头 (4字节)
+        packet.AddRange(BitConverter.GetBytes((uint)0x41A05252)); // 魔术字节
+        
+        // 添加包长度 (4字节)
+        packet.AddRange(BitConverter.GetBytes((uint)28)); // 总长度28字节
+        
+        // 添加连接类型 (4字节)
+        packet.AddRange(BitConverter.GetBytes((uint)0x00000001)); // 连接类型: 登录
+        
+        // 添加客户端版本 (4字节)
+        packet.AddRange(BitConverter.GetBytes((uint)0x2024011)); // 版本号
+        
+        // 添加时间戳 (8字节)
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        packet.AddRange(BitConverter.GetBytes(timestamp));
+        
+        // 添加校验和 (4字节)
+        var checksum = CalculateChecksum(packet.ToArray());
+        packet.AddRange(BitConverter.GetBytes(checksum));
+        
+        return packet.ToArray();
+    }
+    
+    /// <summary>
+    /// 计算数据包校验和
+    /// </summary>
+    /// <param name="data"></param>
+    /// <returns></returns>
+    private static uint CalculateChecksum(byte[] data) {
+        uint sum = 0;
+        for (int i = 0; i < data.Length; i += 4) {
+            if (i + 3 < data.Length) {
+                sum ^= BitConverter.ToUInt32(data, i);
+            }
+        }
+        return sum;
+    }
+
+    /// <summary>
+    /// 分析服务器响应数据
+    /// </summary>
+    /// <param name="server"></param>
+    /// <param name="responseData"></param>
+    private void AnalyzeServerResponse(Server server, byte[] responseData) {
+        try {
+            if (responseData.Length < 4) {
+                logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 响应数据太短，无法解析");
+                return;
+            }
+            
+            // 解析响应包头
+            var header = BitConverter.ToUInt32(responseData, 0);
+            logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 响应包头: 0x{header:X8}");
+            
+            if (responseData.Length >= 8) {
+                var length = BitConverter.ToUInt32(responseData, 4);
+                logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 声明长度: {length} 字节");
+            }
+
+            switch (header) {
+                // 检查是否为已知的FF14服务器响应
+                case 0x41A05252: {
+                    logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 检测到FF14服务器响应包!");
+                
+                    if (responseData.Length >= 12) {
+                        var responseType = BitConverter.ToUInt32(responseData, 8);
+                        switch (responseType) {
+                            case 0x00000001:
+                                logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 响应类型: 登录确认");
+                                break;
+                            case 0x00000002:
+                                logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 响应类型: 服务器状态");
+                                break;
+                            case 0x00000003:
+                                logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 响应类型: 维护中");
+                                break;
+                            default:
+                                logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 响应类型: 未知 (0x{responseType:X8})");
+                                break;
+                        }
+                    }
+
+                    break;
+                }
+                case 0x52A05241:
+                    logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 检测到服务器维护响应!");
+                    break;
+                default:
+                    logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 未知的服务器响应格式");
+                    break;
+            }
+            
+            // 如果数据足够长，尝试提取更多信息
+            if (responseData.Length >= 16) {
+                logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 额外数据: {BitConverter.ToString(responseData, 12, Math.Min(8, responseData.Length - 12))}");
+            }
+            
+        } catch (Exception ex) {
+            logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 解析响应数据时出错: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 检查所有服务器的状态（使用双层检测）
     /// </summary>
     private async Task CheckAllServersAsync() {
-        logListBox.Items.Insert(0, $"[{DateTime.Now}] 开始检查所有服务器状态...");
+        logListBox.Items.Insert(0, $"[{DateTime.Now}] 开始检查所有服务器状态（双层检测）...");
 
-        var tasks = serverAreas.SelectMany(area => area.Servers)
-            .Select(async server => {
-                var isOnline = await CheckServerConnectivityAsync(server);
-                server.IsRunning = isOnline;
-                return new { Server = server, IsOnline = isOnline };
-            });
-
-        var results = await Task.WhenAll(tasks);
+        // 首先获取API数据
+        var apiResponse = await GetFF14ApiStatusAsync();
+      
+        var allServers = serverAreas.SelectMany(area => area.Servers).ToList();
+      
+        // 并发执行双层检测
+        var checkTasks = allServers.Select(server => PerformDualCheckAsync(server, apiResponse));
+        var results = await Task.WhenAll(checkTasks);
 
         // 更新UI
         foreach (TreeNode areaNode in serverTreeView.Nodes) {
             foreach (TreeNode serverNode in areaNode.Nodes) {
                 if (serverNode.Tag is Server server) {
-                    UpdateServerNodeText(serverNode, server);
+                    var result = results.First(r => r.Server == server);
+                    UpdateServerNodeText(serverNode, server, result.Status, result.DetailedStatus);
                 }
             }
         }
 
-        var onlineCount = results.Count(r => r.IsOnline);
+        var onlineCount = results.Count(r => r.Server.IsRunning);
         var totalCount = results.Length;
-        logListBox.Items.Insert(0, $"[{DateTime.Now}] 检查完成: {onlineCount}/{totalCount} 服务器在线");
+        logListBox.Items.Insert(0, $"[{DateTime.Now}] 双层检查完成: {onlineCount}/{totalCount} 服务器在线");
     }
 
     /// <summary>
-    /// 定时器每次触发时检查选中的服务器状态
+    /// 定时器每次触发时检查选中的服务器状态（使用双层检测）
     /// </summary>
     /// <param name="sender"></param>
     /// <param name="e"></param>
@@ -330,18 +566,16 @@ public partial class Form1 : Form {
                 .Where(s => s.IsSelected)
                 .ToList();
 
-            logListBox.Items.Insert(0, $"[{DateTime.Now}] 开始同时检查 {selectedServers.Count} 个服务器状态...");
+            logListBox.Items.Insert(0, $"[{DateTime.Now}] 开始双层检查 {selectedServers.Count} 个服务器状态...");
 
             // 记录每个服务器检查前的状态
             var serverStates = selectedServers.ToDictionary(s => s, s => s.IsRunning);
 
-            // 并发检查所有选中的服务器
-            var checkTasks = selectedServers.Select(async server => {
-                var isOnline = await CheckServerConnectivityAsync(server);
-                server.IsRunning = isOnline;
-                return new { Server = server, IsOnline = isOnline, WasOnline = serverStates[server] };
-            });
+            // 首先获取API数据
+            var apiResponse = await GetFF14ApiStatusAsync();
 
+            // 并发检查所有选中的服务器
+            var checkTasks = selectedServers.Select(server => PerformDualCheckAsync(server, apiResponse));
             var results = await Task.WhenAll(checkTasks);
 
             // 更新UI和处理状态变化
@@ -350,17 +584,18 @@ public partial class Form1 : Form {
                 foreach (TreeNode areaNode in serverTreeView.Nodes) {
                     foreach (TreeNode serverNode in areaNode.Nodes) {
                         if (serverNode.Tag != result.Server) continue;
-                        UpdateServerNodeText(serverNode, result.Server);
+                        UpdateServerNodeText(serverNode, result.Server, result.Status, result.DetailedStatus);
                         break;
                     }
                 }
 
                 // 如果服务器从离线变为在线，则记录并加入通知列表
-                if (result.WasOnline || !result.IsOnline) continue;
-                var areaName = serverAreas.First(a => a.Servers.Contains(result.Server)).Name;
-                var message = $"{areaName} - {result.Server.Name} 服务器上线! (延时: {result.Server.LastPingTime:F1}ms)";
-                logListBox.Items.Insert(0, $"[{DateTime.Now}] {message}");
-                newlyOnlineServers.Add(message);
+                if (!serverStates[result.Server] && result.Server.IsRunning) {
+                    var areaName = serverAreas.First(a => a.Servers.Contains(result.Server)).Name;
+                    var message = $"{areaName} - {result.Server.Name} 服务器上线! ({result.Status})";
+                    logListBox.Items.Insert(0, $"[{DateTime.Now}] {message}");
+                    newlyOnlineServers.Add(message);
+                }
             }
 
             // 如果有新上线的服务器，则播放提示音并显示通知
@@ -383,9 +618,9 @@ public partial class Form1 : Form {
                 }
             }
 
-            var onlineCount = results.Count(r => r.IsOnline);
-            logListBox.Items.Insert(0, $"[{DateTime.Now}] 同时检查完成: {onlineCount}/{selectedServers.Count} 服务器在线");
-            
+            var onlineCount = results.Count(r => r.Server.IsRunning);
+            logListBox.Items.Insert(0, $"[{DateTime.Now}] 双层检查完成: {onlineCount}/{selectedServers.Count} 服务器在线");
+     
             // 更新最后检查时间
             lastCheckLabel.Text = $@"最后检查: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
         } catch (Exception ex) {
@@ -535,24 +770,271 @@ public partial class Form1 : Form {
     /// <param name="sender"></param>
     /// <param name="e"></param>
     private void exitMenuItem_Click(object sender, EventArgs e) {
-        if (isMonitoring) {
-            var result = MessageBox.Show(@"监控正在进行中，确定要退出应用吗？", @"确认退出",
-                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+ if (isMonitoring) {
+     var result = MessageBox.Show(@"监控正在进行中，确定要退出应用吗？", @"确认退出",
+    MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
-            if (result != DialogResult.Yes) {
-                return;
-            }
-        }
+ if (result != DialogResult.Yes) {
+         return;
+   }
+    }
 
-        closeAppOnFormClosing = true;
+  closeAppOnFormClosing = true;
 
-        if (monitorTimer != null) {
-            monitorTimer.Stop();
-            monitorTimer.Dispose();
-        }
+if (monitorTimer != null) {
+        monitorTimer.Stop();
+     monitorTimer.Dispose();
+   }
 
         alertSound?.Dispose();
+        httpClient?.Dispose();
 
         Application.Exit();
+    }
+
+    /// <summary>
+    /// 测试抓包按钮点击事件处理（使用双层检测）
+    /// </summary>
+ /// <param name="sender"></param>
+    /// <param name="e"></param>
+    private async void TestPacketButton_Click(object sender, EventArgs e) {
+        try {
+            // 获取当前选中的服务器节点
+            var selectedNode = serverTreeView.SelectedNode;
+     
+         if (selectedNode?.Tag is not Server selectedServer) {
+              MessageBox.Show(@"请先选择一个服务器进行测试。", @"提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        return;
+  }
+
+testPacketButton.Enabled = false;
+      testPacketButton.Text = @"测试中...";
+    
+   logListBox.Items.Insert(0, $"[{DateTime.Now}] ==========================================");
+            logListBox.Items.Insert(0, $"[{DateTime.Now}] 开始双层测试服务器 {selectedServer.Name}");
+          logListBox.Items.Insert(0, $"[{DateTime.Now}] ==========================================");
+            
+         // 获取API数据
+            var apiResponse = await GetFF14ApiStatusAsync();
+            
+   // 执行双层检查
+            var result = await PerformDualCheckAsync(selectedServer, apiResponse);
+   
+            // 更新UI中对应的节点
+    foreach (TreeNode areaNode in serverTreeView.Nodes) {
+      foreach (TreeNode serverNode in areaNode.Nodes) {
+          if (serverNode.Tag != selectedServer) continue;
+         UpdateServerNodeText(serverNode, selectedServer, result.Status, result.DetailedStatus);
+        break;
+          }
+            }
+            
+      logListBox.Items.Insert(0, $"[{DateTime.Now}] ==========================================");
+   logListBox.Items.Insert(0, $"[{DateTime.Now}] 双层测试完成!");
+   logListBox.Items.Insert(0, $"[{DateTime.Now}] 最终状态: {result.Status}");
+        logListBox.Items.Insert(0, $"[{DateTime.Now}] 详细信息: {result.DetailedStatus}");
+ logListBox.Items.Insert(0, $"[{DateTime.Now}] ==========================================");
+     
+        } catch (Exception ex) {
+          logListBox.Items.Insert(0, $"[{DateTime.Now}] 测试双层检测失败: {ex.Message}");
+            MessageBox.Show($@"测试双层检测失败: {ex.Message}", @"错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        } finally {
+            testPacketButton.Enabled = true;
+   testPacketButton.Text = @"测试抓包";
+     }
+    }
+
+    /// <summary>
+    /// 检查字节数组是否包含指定序列
+    /// </summary>
+    /// <param name="source"></param>
+    /// <param name="pattern"></param>
+    /// <returns></returns>
+    private static bool ContainsSequence(byte[] source, byte[] pattern) {
+        for (int i = 0; i <= source.Length - pattern.Length; i++) {
+            bool found = true;
+     for (int j = 0; j < pattern.Length; j++) {
+   if (source[i + j] != pattern[j]) {
+        found = false;
+          break;
+                }
+            }
+if (found) return true;
+        }
+      return false;
+    }
+
+    /// <summary>
+    /// 调用FF14官方API获取服务器状态
+    /// </summary>
+    /// <returns></returns>
+    private async Task<FF14ApiResponse?> GetFF14ApiStatusAsync() {
+        try {
+        logListBox.Items.Insert(0, $"[{DateTime.Now}] 正在调用FF14官方API...");
+     
+            const string apiUrl = "https://ff14act.web.sdo.com/api/serverStatus/getServerStatus";
+          var response = await httpClient.GetAsync(apiUrl);
+            
+       if (response.IsSuccessStatusCode) {
+                var jsonContent = await response.Content.ReadAsStringAsync();
+    logListBox.Items.Insert(0, $"[{DateTime.Now}] API调用成功，收到响应数据");
+       
+      var apiResponse = JsonSerializer.Deserialize<FF14ApiResponse>(jsonContent, new JsonSerializerOptions {
+           PropertyNameCaseInsensitive = true
+        });
+           
+      if (apiResponse?.IsSuccess == true) {
+          logListBox.Items.Insert(0, $"[{DateTime.Now}] API数据解析成功，共 {apiResponse.Data?.Count ?? 0} 个区域");
+                lastApiResponse = apiResponse;
+        return apiResponse;
+    } else {
+logListBox.Items.Insert(0, $"[{DateTime.Now}] API返回错误: {apiResponse?.ErrorMsg ?? "未知错误"}");
+    }
+   } else {
+      logListBox.Items.Insert(0, $"[{DateTime.Now}] API调用失败: HTTP {response.StatusCode}");
+        }
+        } catch (HttpRequestException ex) {
+            logListBox.Items.Insert(0, $"[{DateTime.Now}] API网络请求失败: {ex.Message}");
+        } catch (TaskCanceledException ex) {
+logListBox.Items.Insert(0, $"[{DateTime.Now}] API请求超时: {ex.Message}");
+        } catch (JsonException ex) {
+    logListBox.Items.Insert(0, $"[{DateTime.Now}] API响应解析失败: {ex.Message}");
+        } catch (Exception ex) {
+            logListBox.Items.Insert(0, $"[{DateTime.Now}] API调用异常: {ex.Message}");
+        }
+  
+ return null;
+    }
+
+    /// <summary>
+    /// 从API响应中查找特定服务器的状态
+    /// </summary>
+    /// <param name="serverName"></param>
+    /// <param name="apiResponse"></param>
+    /// <returns></returns>
+    private static ServerStatusData? FindServerInApiResponse(string serverName, FF14ApiResponse? apiResponse) {
+        if (apiResponse?.Data == null) return null;
+        
+        foreach (var area in apiResponse.Data) {
+    var server = area.Group.FirstOrDefault(s => 
+            string.Equals(s.Name, serverName, StringComparison.OrdinalIgnoreCase));
+    if (server != null) {
+ return server;
+          }
+}
+    
+        return null;
+    }
+
+    /// <summary>
+ /// 执行双层服务器检测（TCP连接 + FF14 API）
+ /// </summary>
+ /// <param name="server"></param>
+ /// <param name="apiResponse"></param>
+ /// <returns></returns>
+    private async Task<ServerCheckResult> PerformDualCheckAsync(Server server, FF14ApiResponse? apiResponse) {
+     var result = new ServerCheckResult(server);
+        
+        logListBox.Items.Insert(0, $"[{DateTime.Now}] === 开始双层检测: {server.Name} ===");
+     
+     // 第一层：TCP连接检测
+        logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 第一层检测: TCP连接...");
+        result.TcpConnectable = await CheckTcpConnectivityAsync(server);
+        
+        // 第二层：API状态检测
+        logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 第二层检测: 官方API状态...");
+     result.ApiData = FindServerInApiResponse(server.Name, apiResponse);
+ result.ApiReportsOnline = result.ApiData?.Running == true;
+        
+        // 分析双层检测结果
+        AnalyzeDualCheckResult(result);
+    
+        logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 最终状态: {result.Status}");
+    logListBox.Items.Insert(0, $"[{DateTime.Now}] === 双层检测完成: {server.Name} ===");
+     
+        return result;
+    }
+
+    /// <summary>
+    /// 分析双层检测结果并确定最终状态
+    /// </summary>
+    /// <param name="result"></param>
+    private void AnalyzeDualCheckResult(ServerCheckResult result) {
+        var server = result.Server;
+        
+        if (result.TcpConnectable && result.ApiReportsOnline) {
+       // 两层检测都通过
+   result.Status = "在线";
+            result.DetailedStatus = "TCP连接正常，官方API确认在线";
+   server.IsRunning = true;
+        } else if (result.TcpConnectable && !result.ApiReportsOnline) {
+        // TCP通但API报告离线
+    result.Status = "TCP通/API离线";
+            result.DetailedStatus = "TCP端口开放但官方API报告离线";
+  server.IsRunning = false;
+   } else if (!result.TcpConnectable && result.ApiReportsOnline) {
+        // TCP不通但API报告在线
+        result.Status = "TCP断/API在线";
+     result.DetailedStatus = "TCP连接失败但官方API报告在线";
+            server.IsRunning = false;
+      } else {
+// 两层检测都失败
+            result.Status = "完全离线";
+        result.DetailedStatus = "TCP连接失败且官方API确认离线";
+            server.IsRunning = false;
+        }
+      
+        // 添加API详细信息
+  if (result.ApiData != null) {
+          var apiDetails = new List<string>();
+            if (result.ApiData.IsNew) apiDetails.Add("新服");
+          if (result.ApiData.IsUpgrade) apiDetails.Add("维护中");
+    if (result.ApiData.IsBusy) apiDetails.Add("繁忙");
+       if (!result.ApiData.IsCreate) apiDetails.Add("禁止建角");
+ if (!result.ApiData.IsInt) apiDetails.Add("禁止登录");
+            
+            if (apiDetails.Count > 0) {
+                result.DetailedStatus += $" ({string.Join(", ", apiDetails)})";
+        }
+        }
+        
+        logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] TCP检测: {(result.TcpConnectable ? "成功" : "失败")}");
+        logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] API检测: {(result.ApiReportsOnline ? "在线" : "离线")}");
+        logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] 详细状态: {result.DetailedStatus}");
+    }
+
+    /// <summary>
+    /// 简化的TCP连接检测（不包含复杂的数据分析）
+    /// </summary>
+    /// <param name="server"></param>
+    /// <returns></returns>
+    private async Task<bool> CheckTcpConnectivityAsync(Server server) {
+        var stopwatch = Stopwatch.StartNew();
+        
+        try {
+      using var client = new TcpClient();
+         
+            // 设置连接超时
+    var connectTask = client.ConnectAsync(IPAddress.Parse(server.IpAddress), server.Port);
+            var timeoutTask = Task.Delay(AppSettings.ConnectionTimeoutMs);
+
+         var completedTask = await Task.WhenAny(connectTask, timeoutTask);
+   stopwatch.Stop();
+  
+          if (completedTask == connectTask && client.Connected) {
+            server.LastPingTime = stopwatch.Elapsed.TotalMilliseconds;
+  logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] TCP连接成功 ({server.LastPingTime:F1}ms)");
+      return true;
+} else {
+   server.LastPingTime = 0;
+                logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] TCP连接失败 (超时)");
+            return false;
+            }
+        } catch (Exception ex) {
+  stopwatch.Stop();
+            server.LastPingTime = 0;
+  logListBox.Items.Insert(0, $"[{DateTime.Now}] [{server.Name}] TCP连接异常: {ex.Message}");
+            return false;
+        }
     }
 }

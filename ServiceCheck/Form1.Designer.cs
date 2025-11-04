@@ -46,6 +46,7 @@
             this.toggleMonitorMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.exitMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.testPacketButton = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer)).BeginInit();
             this.splitContainer.Panel1.SuspendLayout();
             this.splitContainer.Panel2.SuspendLayout();
@@ -65,6 +66,7 @@
             this.splitContainer.Panel1.Controls.Add(this.refreshButton);
             this.splitContainer.Panel1.Controls.Add(this.toggleButton);
             this.splitContainer.Panel1.Controls.Add(this.testSoundButton);
+            this.splitContainer.Panel1.Controls.Add(this.testPacketButton);
             this.splitContainer.Panel1.Controls.Add(this.statusLabel);
             this.splitContainer.Panel1.Controls.Add(this.lastCheckLabel);
             
@@ -130,22 +132,32 @@
             this.testSoundButton.UseVisualStyleBackColor = true;
             this.testSoundButton.Click += new System.EventHandler(this.TestSoundButton_Click);
             
+            // testPacketButton
+            this.testPacketButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.testPacketButton.Location = new System.Drawing.Point(410, 250);
+            this.testPacketButton.Name = "testPacketButton";
+            this.testPacketButton.Size = new System.Drawing.Size(120, 30);
+            this.testPacketButton.TabIndex = 5;
+            this.testPacketButton.Text = "测试抓包";
+            this.testPacketButton.UseVisualStyleBackColor = true;
+            this.testPacketButton.Click += new System.EventHandler(this.TestPacketButton_Click);
+            
             // statusLabel
             this.statusLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.statusLabel.AutoSize = true;
-            this.statusLabel.Location = new System.Drawing.Point(410, 257);
+            this.statusLabel.Location = new System.Drawing.Point(540, 257);
             this.statusLabel.Name = "statusLabel";
             this.statusLabel.Size = new System.Drawing.Size(107, 17);
-            this.statusLabel.TabIndex = 5;
+            this.statusLabel.TabIndex = 6;
             this.statusLabel.Text = "监控状态: 未开启";
             
             // lastCheckLabel
             this.lastCheckLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.lastCheckLabel.AutoSize = true;
-            this.lastCheckLabel.Location = new System.Drawing.Point(550, 257);
+            this.lastCheckLabel.Location = new System.Drawing.Point(650, 257);
             this.lastCheckLabel.Name = "lastCheckLabel";
             this.lastCheckLabel.Size = new System.Drawing.Size(59, 17);
-            this.lastCheckLabel.TabIndex = 6;
+            this.lastCheckLabel.TabIndex = 7;
             this.lastCheckLabel.Text = "最后检查:";
             
             // logListBox
@@ -228,6 +240,7 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Button testSoundButton;
+        private System.Windows.Forms.Button testPacketButton;
         private System.Windows.Forms.NotifyIcon notifyIcon;
         private System.Windows.Forms.ContextMenuStrip trayContextMenu;
         private System.Windows.Forms.ToolStripMenuItem showMenuItem;
